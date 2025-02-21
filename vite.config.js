@@ -12,10 +12,10 @@ export default defineConfig({
         vue(),
     ],
     server: {
-        // Настройка для разработки (при необходимости укажите свой домен)
+        http: true,
         host: 'my-laravel-project.loc',
-        port: 5173,
-        // Если фронт и бэк на разных доменах, можно включить CORS
-        cors: true,
-    },
+        port: 5174,
+        cors: true
+      }
+      
 });

@@ -1,5 +1,9 @@
 import { createApp } from 'vue';
-import App from './App.vue';
+import App from './components/App.vue';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
-// Создаём и монтируем Vue-приложение в элемент с id="app"
-createApp(App).mount('#app');
+
+const app = createApp(App);
+
+app.mount('#app');

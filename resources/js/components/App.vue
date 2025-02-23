@@ -26,6 +26,7 @@
                     <th>ID</th>
                     <th>Title</th>
                     <th>Description</th>
+                    <th>Photo</th>
                     <th colspan="2" class="text-center">Actions</th>
                 </tr>
                 </thead>
@@ -35,17 +36,18 @@
                         <td>{{ post.id }}</td>
                         <td>{{ post.title }}</td>
                         <td>{{ post.description }}</td>
+                        <td>{{ post.photo }}</td>
                         <td>
                             <button @click="deletePost(post.id)" class="btn btn-danger btn-sm">Удалить</button>
                         </td>
                         <td>
-                            <button @click="toggleEdit(post.id)" class="btn btn-primary btn-sm">Изменить</button>
+                            <button @click="toggleEdit(post)" class="btn btn-primary btn-sm">Изменить</button>
                         </td>
                     </tr>
 
                     <!-- Редактирование поста -->
                     <tr v-if="editingPostId === post.id">
-                        <td colspan="5">
+                        <td colspan="6">
                             <div class="p-3 border rounded bg-light">
                                 <h5>Редактирование поста</h5>
                                 <div class="mb-2">
@@ -56,7 +58,11 @@
                                     <label class="form-label">Description</label>
                                     <input type="text" v-model="editedPost.description" class="form-control" />
                                 </div>
-                                <button @click="updatePost(post.id)" class="btn btn-success btn-sm">Обновить</button>
+                                <div class="mb-2">
+                                    <label class="form-label">Photo</label>
+                                    <input type="text" v-model="editedPost.photo" class="form-control" />
+                                </div>
+                                <button @click="updatePost" class="btn btn-success btn-sm">Обновить</button>
                             </div>
                         </td>
                     </tr>
@@ -82,14 +88,16 @@ export default {
             photo: ''
         });
 
-        // Редактируемая запись и состояние редактирования
+        // Редактируемая запись
         const editingPostId = ref(null);
         const editedPost = ref({
+            id: null,
             title: '',
-            description: ''
+            description: '',
+            photo: ''
         });
 
-        // Функция для получения постов
+        // Получение постов
         const getPosts = async () => {
             try {
                 const response = await axios.get('/api/posts');
@@ -99,56 +107,66 @@ export default {
             }
         };
 
-        // Функция для добавления поста
+        // Создание поста
         const submitForm = async () => {
             try {
                 const response = await axios.post('/api/posts', form.value);
 
                 posts.value.push(response.data);
-                form.value.title = '';
-                form.value.description = '';
-                form.value.photo = '';
+                form.value = { title: '', description: '', photo: '' };
             } catch (error) {
                 console.error('Ошибка при создании поста', error);
             }
         };
 
-        // Функция для удаления поста
+        // Удаление поста
         const deletePost = async (postId) => {
             try {
                 await axios.delete(`/api/posts/${postId}`);
-                posts.value = posts.value.filter(post => post.id !== postId); // Удаляем пост из списка
+                posts.value = posts.value.filter(post => post.id !== postId);
             } catch (error) {
                 console.error('Ошибка при удалении поста:', error);
             }
         };
 
-        // Функция для обновления поста
-        const updatePost = async (postId) => {
+        // Обновление поста
+        const updatePost = async () => {
             try {
+                console.log('Отправляемые данные:', editedPost.value);
 
-                console.log('Отправляемые данные:', editedPost.value); // Выводим данные перед отправкой
-                const response = await axios.put(`/api/posts/${postId}`, editedPost.value);
+                const response = await axios.put(`/api/posts/${editedPost.value.id}`, {
+                    title: editedPost.value.title,
+                    description: editedPost.value.description,
+                    photo: editedPost.value.photo
+                });
 
-                // Обновляем данные в списке постов
-                posts.value = posts.value.map(post =>
-                    post.id === postId ? response.data.post : post
-                );
+                console.log('Ответ сервера:', response.data);
 
-                editingPostId.value = null; // Закрываем редактирование
+                // Если сервер возвращает обновленные данные
+                if (response.data && response.data.id) {
+                    posts.value = posts.value.map(post =>
+                        post.id === editedPost.value.id ? response.data : post
+                    );
+                } else {
+                    console.warn('Ответ не содержит обновленный пост, обновляем вручную');
+                    posts.value = posts.value.map(post =>
+                        post.id === editedPost.value.id ? { ...post, ...editedPost.value } : post
+                    );
+                }
+
+                editingPostId.value = null;
             } catch (error) {
-                console.error('Ошибка при обновлении поста:', error.response.data); // Выводим ошибку с сервера
+                console.error('Ошибка при обновлении поста:', error.response?.data || error);
             }
         };
 
-        // Функция для переключения режима редактирования
-        const toggleEdit = (postId) => {
-            if (editingPostId.value === postId) {
-                editingPostId.value = null; // Если уже редактируем, то закрыть редактирование
+        // Включение режима редактирования
+        const toggleEdit = (post) => {
+            if (editingPostId.value === post.id) {
+                editingPostId.value = null;
             } else {
-                editingPostId.value = postId; // Иначе открыть редактирование для этого поста
-                const post = posts.value.find(p => p.id === postId);
-                editedPost.value = { title: post.title, description: post.description }; // Заполняем форму редактирования
+                editingPostId.value = post.id;
+                editedPost.value = { ...post }; // Копируем объект, чтобы не изменять сразу в списке
             }
         };
 
